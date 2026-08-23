@@ -120,7 +120,7 @@ class ViT(nn.Module):
 
         self.patch_embed = PatchEmbedding(config['img_size'], config['patch_size'], config['n_embd'])
         self.blocks = nn.Sequential(*[Block(config) for _ in range(config['n_layer'])])
-        self.mlp_head = nn.Linear(config['m_embd'], 10)
+        self.mlp_head = nn.Linear(config['n_embd'], 10)
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
