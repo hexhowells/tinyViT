@@ -2,10 +2,8 @@ model_type = 'vit-tiny'
 n_layer = 12
 n_head = 12
 n_embd =  768
-
-# these options must be filled in externally
-vocab_size = 50257
-context_size = 1024
+img_size = 256
+patch_size = 16
 
 # dropout hyperparameters
 embd_pdrop = 0.1

@@ -118,14 +118,9 @@ class ViT(nn.Module):
             config['n_head'] = config['models'][model_type]['n_head']
             config['n_embd'] = config['models'][model_type]['n_embd']
 
-        self.transformer: nn.ModuleDict = nn.ModuleDict(dict(
-            wte = nn.Embedding(config['vocab_size'], config['n_embd']),  # weight token embedding
-            wpe = nn.Embedding(config['context_size'], config['n_embd']),  # weight position embedding
-            drop = nn.Dropout(config['embd_pdrop']),
-            h = nn.ModuleList([Block(config) for _ in range(config['n_layer'])]),  # hidden layers
-            ln_f = nn.LayerNorm(config['n_embd']),
-        ))
-        self.lm_head = nn.Linear(config['n_embd'], config['vocab_size'], bias=False)
+        self.patch_embed = PatchEmbedding(config['img_size'], config['patch_size'], config['n_embd'])
+        self.blocks = nn.Sequential(*[Block(config) for _ in range(config['n_layer'])])
+        self.mlp_head = nn.Linear(config['m_embd'], 10)
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
@@ -133,9 +128,10 @@ class ViT(nn.Module):
             if pn.endswith('c_proj.weight'):
                 torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config['n_layer']))
 
-        # report number of parameters (note we don't count the decoder parameters in lm_head)
-        n_params = sum(p.numel() for p in self.transformer.parameters())
-        print("number of parameters: %.2fM" % (n_params/1e6,))
+        # report number of parameters
+        n_params = sum(p.numel() for p in self.parameters())
+        head_params = sum(self.mlp_head.parameters())
+        print("number of parameters: %.2fM" % ((n_params - head_params)/1e6,))
 
 
     def _init_weights(self, module):
@@ -151,30 +147,16 @@ class ViT(nn.Module):
             torch.nn.init.ones_(module.weight)
     
 
-    def forward(self, idx, targets=None) -> tuple[torch.Tensor, torch.Tensor|None]:
-        device = idx.device
-        _, t = idx.size()
-        assert t <= self.context_size, f"Cannot forward sequence of length {t}, block size is only {self.context_size}"
-        
-        # pos is an array of integers as torch.nn.Embedding performs a direct array lookup 
-        # instead of computing the entire linear forward pass
-        pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0)  # pos = [[0, 1, 2, 3, 4, ..., t]]
-
-        tok_emb = self.transformer.wte(idx)  # type: ignore
-        pos_emb = self.transformer.wpe(pos)  # type: ignore
-        x = self.transformer.drop(tok_emb + pos_emb)  # type: ignore
-        
-        for block in self.transformer.h:  # type: ignore
-            x = block(x)
-        
-        x = self.transformer.ln_f(x)  # type: ignore
-        logits = self.lm_head(x)
+    def forward(self, x, targets=None) -> tuple[torch.Tensor, torch.Tensor|None]:
+        x = self.patch_embed(x)
+        x = self.blocks(x)
+        x = self.mlp_head(x)
 
         loss = None
         if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+            loss = F.cross_entropy(x.view(-1, x.size(-1)), targets.view(-1), ignore_index=-1)
 
-        return logits, loss
+        return x, loss
 
 
     def configure_optimizers(self, train_config: dict) -> torch.optim.Optimizer:
