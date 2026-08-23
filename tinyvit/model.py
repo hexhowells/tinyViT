@@ -147,16 +147,13 @@ class ViT(nn.Module):
             torch.nn.init.ones_(module.weight)
     
 
-    def forward(self, x, targets=None) -> tuple[torch.Tensor, torch.Tensor|None]:
+    def forward(self, x) -> torch.Tensor:
         x = self.patch_embed(x)
         x = self.blocks(x)
+        x = x[:, 0, :]  # extract class token
         x = self.mlp_head(x)
 
-        loss = None
-        if targets is not None:
-            loss = F.cross_entropy(x.view(-1, x.size(-1)), targets.view(-1), ignore_index=-1)
-
-        return x, loss
+        return x
 
 
     def configure_optimizers(self, train_config: dict) -> torch.optim.Optimizer:
