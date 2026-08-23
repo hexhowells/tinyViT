@@ -130,7 +130,7 @@ class ViT(nn.Module):
 
         # report number of parameters
         n_params = sum(p.numel() for p in self.parameters())
-        head_params = sum(self.mlp_head.parameters())
+        head_params = sum(p.numel() for p in self.mlp_head.parameters())
         print("number of parameters: %.2fM" % ((n_params - head_params)/1e6,))
 
 
@@ -140,8 +140,6 @@ class ViT(nn.Module):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
-        elif isinstance(module, nn.Embedding):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
         elif isinstance(module, nn.LayerNorm):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
@@ -166,7 +164,7 @@ class ViT(nn.Module):
         # separate out all parameters to those that will and won't experience regularizing weight decay
         decay = set()
         no_decay = set()
-        whitelist_weight_modules = (torch.nn.Linear, )
+        whitelist_weight_modules = (torch.nn.Linear, torch.nn.Conv2d)
         blacklist_weight_modules = (torch.nn.LayerNorm, torch.nn.Embedding)
         
         for module_name, m in self.named_modules():
@@ -182,11 +180,11 @@ class ViT(nn.Module):
                 elif param_name.endswith('weight') and isinstance(m, blacklist_weight_modules):
                     no_decay.add(full_param_name)
 
+        no_decay.add('patch_embed.pos_embed')
+        no_decay.add('patch_embed.cls_token')
+
         # validate that we considered every parameter
         param_dict = {pn: p for pn, p in self.named_parameters()}
-
-        decay.discard('lm_head.weight')
-        no_decay.discard('lm_head.weight')
         
         inter_params = decay & no_decay
         union_params = decay | no_decay
