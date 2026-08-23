@@ -82,6 +82,27 @@ class Block(nn.Module):
         return x
 
 
+class PatchEmbedding(nn.Module):
+    def __init__(self, img_size=256, patch_size=16, n_embed=512):
+        assert img_size % patch_size == 0, f'The patch size of {patch_size} is not a factor of the image size {img_size}.'
+        self.patch_size = patch_size
+        self.num_patches = (img_size//patch_size)**2
+
+        self.pos_embed = nn.Parameter(torch.zeros(1, self.num_patches, n_embed))
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, n_embed))
+        self.patch_proj = nn.Conv2d(3, n_embed, patch_size, patch_size)
+
+
+    def forward(self, x):
+        x = self.patch_proj(x)
+        x = x.flatten(2).transpose(1, 2)
+        cls_token = self.cls_token.expand(x.shape[0], -1, -1)  # expand batch dim of class token
+        x = torch.cat((cls_token, x), dim=1)
+        x = x + self.pos_embed
+
+        return x
+
+
 class ViT(nn.Module):
     def __init__(self, config: dict):
         super().__init__()
