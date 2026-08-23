@@ -1,0 +1,43 @@
+model_type = 'vit-tiny'
+n_layer = 12
+n_head = 12
+n_embd =  768
+
+# these options must be filled in externally
+vocab_size = 50257
+context_size = 1024
+
+# dropout hyperparameters
+embd_pdrop = 0.1
+resid_pdrop = 0.1
+attn_pdrop = 0.1
+
+[models]
+vit-tiny = {n_layer=12, n_head=3, n_embd=192}   # ~5.7M params
+vit-small = {n_layer=12, n_head=6, n_embd=384}  # ~22M params
+vit-base = {n_layer=12, n_head=12, n_embd=768}  # ~86M params
+vit-large = {n_layer=24, n_head=16, n_embd=1024} # ~307M params
+vit-huge = {n_layer=32, n_head=16, n_embd=1280} # ~632M params
+
+[data]
+block_size = 128
+
+[trainer]
+device = "auto"          # "auto", "cuda", or "cpu"
+batch_size = 16
+accumulation_steps = 32  # 512 / batch_size
+num_workers = 0
+learning_rate = 5e-4
+weight_decay = 0.1
+betas = [0.9, 0.95]
+grad_norm_clip = 1.0
+max_iters = 50_000
+
+[sft]
+learning_rate = 2e-5
+warmup_steps = 200
+epochs = 2
+
+[system]
+work_dir = "./out"
+data_dir = "//media/datasets/image-datasets/imagenet-100/data"
