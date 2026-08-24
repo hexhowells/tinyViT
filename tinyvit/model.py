@@ -106,10 +106,6 @@ class PatchEmbedding(nn.Module):
 class ViT(nn.Module):
     def __init__(self, config: dict):
         super().__init__()
-        assert config['vocab_size'] is not None
-        assert config['context_size'] is not None
-        self.context_size = config['context_size']
-
         model_type = config['model_type']
         
         # overwrite model params if model spec defined
@@ -135,7 +131,7 @@ class ViT(nn.Module):
 
 
     def _init_weights(self, module):
-        """initialise the GPT model weights"""
+        """initialise the model weights"""
         if isinstance(module, nn.Linear):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
             if module.bias is not None:
