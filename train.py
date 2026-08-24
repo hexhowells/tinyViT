@@ -61,6 +61,51 @@ train_loader = DataLoader(
     }
 )
 
+val_loader = DataLoader(
+    dataset['val'],  # type: ignore
+    batch_size=config['trainer']['batch_size'],
+    shuffle=True,
+    num_workers=config['trainer']['num_workers'],
+    collate_fn=lambda batch: {
+        "pixel_values": torch.stack([x["pixel_values"] for x in batch]),
+        "labels": torch.tensor([x["label"] for x in batch])
+    }
+)
+
+
+@torch.no_grad()
+def validate_model(model, val_loader, loss_fn):
+    model.eval()
+    
+    total_loss = 0.0
+    correct = 0
+    total_samples = 0
+
+    for batch_dict in val_loader:
+        batch = batch_dict['pixel_values'].to(device)
+        labels = batch_dict['labels'].to(device)
+
+        with torch.autocast(device_type=device, dtype=torch.bfloat16):
+            preds = model(batch)
+            loss_val = loss_fn(preds, labels)
+
+        batch_size = labels.size(0)
+        
+        total_loss += loss_val.item() * batch_size
+        
+        predicted_classes = preds.argmax(dim=-1)
+        correct += (predicted_classes == labels).sum().item()
+        
+        total_samples += batch_size
+
+    model.train()
+    
+    avg_loss = total_loss / total_samples
+    accuracy = correct / total_samples
+    
+    return avg_loss, accuracy
+        
+
 model = ViT(config).to(device)
 
 optimiser = model.configure_optimizers(config['trainer'])
@@ -98,6 +143,7 @@ global_step = 0
 accumulation_steps = config['trainer']['accumulation_steps']
 
 for epoch in range(config['trainer']['epochs']):
+    print(f"Running epoch {epoch+1}")
     for step, batch_dict in enumerate(train_loader):
         batch = batch_dict['pixel_values'].to(device)
         labels = batch_dict['labels'].to(device)
@@ -106,6 +152,10 @@ for epoch in range(config['trainer']['epochs']):
             preds = model(batch)
             loss_val = loss(preds, labels)
             loss_val = loss_val / accumulation_steps
+
+            predicted_classes = preds.argmax(dim=-1)
+            train_acc = (predicted_classes == labels).sum().item() / labels.size(0)
+
 
         scaler.scale(loss_val).backward()
 
@@ -124,10 +174,19 @@ for epoch in range(config['trainer']['epochs']):
 
             wandb.log({
                 "loss": loss_val.item() * accumulation_steps,
+                "acc": train_acc,
                 "lr": lr,
                 "global_step": global_step
             }, step=global_step)
 
             global_step += 1
+
+
+    val_loss, val_acc = validate_model(model, val_loader, loss)
+    wandb.log({
+        "val_loss": val_loss,
+        "val_acc": val_acc,
+        "global_step": global_step
+    }, step=global_step)
 
     torch.save(model.state_dict(), 'checkpoints/vit.pth')
