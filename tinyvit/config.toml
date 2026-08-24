@@ -1,8 +1,8 @@
-model_type = 'vit-tiny'
+model_type = 'vit-base'
 n_layer = 12
 n_head = 12
 n_embd =  768
-img_size = 256
+img_size = 224
 patch_size = 16
 
 # dropout hyperparameters
@@ -22,12 +22,12 @@ block_size = 128
 
 [trainer]
 device = "auto"          # "auto", "cuda", or "cpu"
-batch_size = 16
+batch_size = 128
 accumulation_steps = 32  # 512 / batch_size
 num_workers = 0
 learning_rate = 5e-4
 weight_decay = 0.1
-betas = [0.9, 0.95]
+betas = [0.9, 0.999]
 grad_norm_clip = 1.0
 max_iters = 50_000
 
@@ -38,4 +38,4 @@ epochs = 2
 
 [system]
 work_dir = "./out"
-data_dir = "//media/datasets/image-datasets/imagenet-100/data"
+data_dir = "/media/datasets/image-datasets/imagenet-100/data"
