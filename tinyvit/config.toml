@@ -10,7 +10,7 @@ embd_pdrop = 0.1
 resid_pdrop = 0.1
 attn_pdrop = 0.1
 
-class_num = 128
+num_classes = 100
 
 [models]
 vit-tiny = {n_layer=12, n_head=3, n_embd=192}   # ~5.7M params
