@@ -84,11 +84,12 @@ class Block(nn.Module):
 
 class PatchEmbedding(nn.Module):
     def __init__(self, img_size=256, patch_size=16, n_embed=512):
+        super().__init__()
         assert img_size % patch_size == 0, f'The patch size of {patch_size} is not a factor of the image size {img_size}.'
         self.patch_size = patch_size
         self.num_patches = (img_size//patch_size)**2
 
-        self.pos_embed = nn.Parameter(torch.zeros(1, self.num_patches, n_embed))
+        self.pos_embed = nn.Parameter(torch.zeros(1, self.num_patches+1, n_embed))
         self.cls_token = nn.Parameter(torch.zeros(1, 1, n_embed))
         self.patch_proj = nn.Conv2d(3, n_embed, patch_size, patch_size)
 
