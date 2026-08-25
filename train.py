@@ -28,11 +28,14 @@ wandb.init(
     config=config,
 )
 
-
 data_files = {
-    "train": "/media/datasets/image-datasets/imagenet-100/data/train-*.parquet",
-    "val": "/media/datasets/image-datasets/imagenet-100/data/validation-*.parquet",
+    "train": "/media/datasets/image-datasets/imagenet-1k/default/train/*.parquet",
+    "val": "/media/datasets/image-datasets/imagenet-1k/default/validation/*.parquet",
     }
+# data_files = {
+#     "train": "/media/datasets/image-datasets/imagenet-100/data/train-*.parquet",
+#     "val": "/media/datasets/image-datasets/imagenet-100/data/validation-*.parquet",
+#     }
 dataset = load_dataset("parquet", data_files=data_files)
 
 transforms = v2.Compose([
@@ -144,6 +147,7 @@ accumulation_steps = config['trainer']['accumulation_steps']
 
 for epoch in range(config['trainer']['epochs']):
     print(f"Running epoch {epoch+1}")
+
     for step, batch_dict in enumerate(train_loader):
         batch = batch_dict['pixel_values'].to(device)
         labels = batch_dict['labels'].to(device)

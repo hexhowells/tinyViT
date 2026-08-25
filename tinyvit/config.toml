@@ -1,4 +1,4 @@
-model_type = 'vit-base'
+model_type = 'vit-small'
 n_layer = 12
 n_head = 12
 n_embd =  768
@@ -10,7 +10,7 @@ embd_pdrop = 0.1
 resid_pdrop = 0.1
 attn_pdrop = 0.1
 
-num_classes = 100
+num_classes = 1000
 
 [models]
 vit-tiny = {n_layer=12, n_head=3, n_embd=192}   # ~5.7M params
@@ -24,8 +24,8 @@ block_size = 128
 
 [trainer]
 device = "auto"  # "auto", "cuda", or "cpu"
-batch_size = 256
-accumulation_steps = 2
+batch_size = 512
+accumulation_steps = 1
 num_workers = 4
 learning_rate = 3e-4
 weight_decay = 0.3
