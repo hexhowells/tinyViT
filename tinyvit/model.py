@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from torchvision.ops import StochasticDepth
 
 import math
 
@@ -67,17 +68,18 @@ class MLP(nn.Module):
 
 class Block(nn.Module):
     """single transformer block"""
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, drop_path_prob: float):
         super().__init__()
         self.ln_1 = nn.LayerNorm(config['n_embd'])
         self.attn = SelfAttention(config)
         self.ln_2 = nn.LayerNorm(config['n_embd'])
         self.mlp = MLP(config)
+        self.drop_path = StochasticDepth(p=drop_path_prob, mode="row") if drop_path_prob > 0.0 else nn.Identity()
 
 
     def forward(self, x):
-        x = x + self.attn(self.ln_1(x))
-        x = x + self.mlp(self.ln_2(x))
+        x = x + self.drop_path(self.attn(self.ln_1(x)))
+        x = x + self.drop_path(self.mlp(self.ln_2(x)))
         
         return x
 
@@ -115,8 +117,11 @@ class ViT(nn.Module):
             config['n_head'] = config['models'][model_type]['n_head']
             config['n_embd'] = config['models'][model_type]['n_embd']
 
+        drop_path_rate = config.get("drop_path_rate", 0.1)
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, config['n_layer'])]
+
         self.patch_embed = PatchEmbedding(config['img_size'], config['patch_size'], config['n_embd'])
-        self.blocks = nn.Sequential(*[Block(config) for _ in range(config['n_layer'])])
+        self.blocks = nn.Sequential(*[Block(config, dpr[i]) for i in range(config['n_layer'])])
         self.mlp_head = nn.Linear(config['n_embd'], config['num_classes'])
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
