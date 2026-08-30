@@ -34,10 +34,6 @@ data_files = {
     "train": "/media/datasets/image-datasets/imagenet-1k/default/train/*.parquet",
     "val": "/media/datasets/image-datasets/imagenet-1k/default/validation/*.parquet",
     }
-# data_files = {
-#     "train": "/media/datasets/image-datasets/imagenet-100/data/train-*.parquet",
-#     "val": "/media/datasets/image-datasets/imagenet-100/data/validation-*.parquet",
-#     }
 dataset = load_dataset("parquet", data_files=data_files)
 
 transforms = v2.Compose([
