@@ -67,7 +67,7 @@ train_loader = DataLoader(
 val_loader = DataLoader(
     dataset['val'],  # type: ignore
     batch_size=config['trainer']['batch_size'],
-    shuffle=True,
+    shuffle=False,
     num_workers=config['trainer']['num_workers'],
     collate_fn=lambda batch: {
         "pixel_values": torch.stack([x["pixel_values"] for x in batch]),
