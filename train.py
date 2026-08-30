@@ -161,9 +161,8 @@ for epoch in range(config['trainer']['epochs']):
             loss_val = loss_val / accumulation_steps
 
             predicted_classes = preds.argmax(dim=-1)
-            target_classes = labels.argmax(dim=1)
+            target_classes = labels.argmax(dim=1) if config['mixup']['use_mixup'] else labels            
             train_acc = (predicted_classes == target_classes).sum().item() / target_classes.size(0)
-
 
         scaler.scale(loss_val).backward()
 
