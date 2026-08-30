@@ -8,13 +8,15 @@ from datasets import load_dataset
 import math
 
 import wandb
+import warnings
 
 from tinyvit.model import ViT
 from tinyvit.utils import set_seed, load_config
 
 
-set_seed(100)
+warnings.filterwarnings("ignore", module="PIL.*")
 
+set_seed(100)
 config = load_config()
 
 if config['trainer']['device'] == 'auto':
