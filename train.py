@@ -45,6 +45,8 @@ transforms = v2.Compose([
     v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
+mixup = v2.MixUp(alpha=config['mixup']['alpha'], num_classes=config['num_classes'])
+
 
 def transform_batch(examples):
     examples['pixel_values'] = [transforms(img.convert('RGB')) for img in examples["image"]]
@@ -152,13 +154,17 @@ for epoch in range(config['trainer']['epochs']):
         batch = batch_dict['pixel_values'].to(device)
         labels = batch_dict['labels'].to(device)
 
+        if config['mixup']['use_mixup']:
+            batch, labels = mixup(batch, labels)
+
         with autocast(device_type=device, dtype=torch.bfloat16):
             preds = model(batch)
             loss_val = loss(preds, labels)
             loss_val = loss_val / accumulation_steps
 
             predicted_classes = preds.argmax(dim=-1)
-            train_acc = (predicted_classes == labels).sum().item() / labels.size(0)
+            target_classes = labels.argmax(dim=1)
+            train_acc = (predicted_classes == target_classes).sum().item() / target_classes.size(0)
 
 
         scaler.scale(loss_val).backward()

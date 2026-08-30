@@ -34,6 +34,10 @@ grad_norm_clip = 1.0
 warmup_steps = 100  # make 10% of total steps (126689 images)
 epochs = 50
 
+[mixup]
+use_mixup = true
+alpha = 0.2
+
 [system]
 work_dir = "./out"
 data_dir = "/media/datasets/image-datasets/imagenet-100/data"
