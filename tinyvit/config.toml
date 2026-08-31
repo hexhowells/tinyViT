@@ -9,6 +9,7 @@ patch_size = 16
 embd_pdrop = 0.1
 resid_pdrop = 0.1
 attn_pdrop = 0.1
+drop_path_rate = 0.1
 
 num_classes = 1000
 
@@ -33,6 +34,10 @@ betas = [0.9, 0.999]
 grad_norm_clip = 1.0
 warmup_steps = 100  # make 10% of total steps (126689 images)
 epochs = 50
+
+[mixup]
+use_mixup = true
+alpha = 0.2
 
 [system]
 work_dir = "./out"

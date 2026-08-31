@@ -8,13 +8,15 @@ from datasets import load_dataset
 import math
 
 import wandb
+import warnings
 
 from tinyvit.model import ViT
 from tinyvit.utils import set_seed, load_config
 
 
-set_seed(100)
+warnings.filterwarnings("ignore", module="PIL.*")
 
+set_seed(100)
 config = load_config()
 
 if config['trainer']['device'] == 'auto':
@@ -32,10 +34,6 @@ data_files = {
     "train": "/media/datasets/image-datasets/imagenet-1k/default/train/*.parquet",
     "val": "/media/datasets/image-datasets/imagenet-1k/default/validation/*.parquet",
     }
-# data_files = {
-#     "train": "/media/datasets/image-datasets/imagenet-100/data/train-*.parquet",
-#     "val": "/media/datasets/image-datasets/imagenet-100/data/validation-*.parquet",
-#     }
 dataset = load_dataset("parquet", data_files=data_files)
 
 transforms = v2.Compose([
@@ -44,6 +42,8 @@ transforms = v2.Compose([
     v2.ToDtype(torch.float32, scale=True),
     v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
+
+mixup = v2.MixUp(alpha=config['mixup']['alpha'], num_classes=config['num_classes'])
 
 
 def transform_batch(examples):
@@ -67,7 +67,7 @@ train_loader = DataLoader(
 val_loader = DataLoader(
     dataset['val'],  # type: ignore
     batch_size=config['trainer']['batch_size'],
-    shuffle=True,
+    shuffle=False,
     num_workers=config['trainer']['num_workers'],
     collate_fn=lambda batch: {
         "pixel_values": torch.stack([x["pixel_values"] for x in batch]),
@@ -152,14 +152,17 @@ for epoch in range(config['trainer']['epochs']):
         batch = batch_dict['pixel_values'].to(device)
         labels = batch_dict['labels'].to(device)
 
+        if config['mixup']['use_mixup']:
+            batch, labels = mixup(batch, labels)
+
         with autocast(device_type=device, dtype=torch.bfloat16):
             preds = model(batch)
             loss_val = loss(preds, labels)
             loss_val = loss_val / accumulation_steps
 
             predicted_classes = preds.argmax(dim=-1)
-            train_acc = (predicted_classes == labels).sum().item() / labels.size(0)
-
+            target_classes = labels.argmax(dim=1) if config['mixup']['use_mixup'] else labels            
+            train_acc = (predicted_classes == target_classes).sum().item() / target_classes.size(0)
 
         scaler.scale(loss_val).backward()
 
